@@ -98,6 +98,7 @@ class SDLPlatform : public IPlatform {
 
                 SDL_Texture* newTexture = SDL_CreateTextureFromSurface(renderer, surface);
                 SDL_DestroySurface(surface);
+                SDL_SetTextureScaleMode(newTexture, SDL_SCALEMODE_NEAREST);
 
                 textureCache[anim->id] = {newTexture, SDL_GetTicks()};
             }
