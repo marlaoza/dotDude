@@ -1,6 +1,7 @@
 import struct
 import json
 from PIL import Image
+import sys
 
 TAG_MAP = {
     "IDLE": 0,
@@ -73,5 +74,14 @@ def package_dude_file(srcPath, outputPath):
         for entry in entries:
             file.write(entry)
         file.write(imgBlob)
+    print("File created on " + output)
         
-package_dude_file("././assets/sample","././assets/sample.dude")
+if len(sys.argv) < 3:
+    print("Usage: python main.py <source> <output>")
+    sys.exit(1)
+    
+source = sys.argv[1]
+output = sys.argv[2]
+    
+package_dude_file(source,output)
+# package_dude_file("../../assets/sample","../../assets/sample.dude")
