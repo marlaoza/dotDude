@@ -1,0 +1,9 @@
+[
+	{
+		"frameCount": 3,
+		"frameWidth": 16,
+		"frameHeight": 16,
+		"source": "idle.png",
+		"tag": ["IDLE"]
+	}
+]
