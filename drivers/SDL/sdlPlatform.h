@@ -4,6 +4,20 @@
 #include <iostream>
 #include <map>
 
+class PCFile : public IFile {
+private:
+    std::ifstream file;
+public:
+    PCFile(const char* path) : file(path, std::ios::binary) {}
+    size_t read(void* ptr, size_t size) override { 
+        file.read(reinterpret_cast<char*>(ptr), size);
+        return file.gcount(); 
+    }
+    void seek(size_t offset) override { file.seekg(offset, std::ios::beg); }
+    void close() override { if(file.is_open()) file.close(); }
+    bool isOpen() override { return file.is_open(); }
+};
+
 #define PITCH 2
 struct CachedTexture {
     SDL_Texture* texture;
@@ -21,49 +35,13 @@ class SDLPlatform : public IPlatform {
             this->renderer = renderer;
         };
 
-        DudeFile unpackDude(const char* path) {
-            DudeFile dudeFile;
-            char filePath[256];
-            getFullPath(filePath, sizeof(filePath), path);
-            dudeFile.filePath = path;
-            std::ifstream file(filePath, std::ios::binary);
-            if (!file.is_open()) {
-                std::cerr << "Error - could not open .dude file :  " << path << std::endl;
-                return dudeFile;
-            }
+        IFile* openFile(const char* path) override {
+            char fullPath[256];
+            getFullPath(fullPath, sizeof(fullPath), path);
+            return new PCFile(fullPath);
+        }
 
-            file.read(reinterpret_cast<char*>(&dudeFile.header), sizeof(Header));
-
-            if (std::strncmp(dudeFile.header.identifier, HEADER_ID, 4) != 0) {
-                std::cerr << "Error - invalid filetype" << std::endl;
-                return dudeFile;
-            }
-
-            file.read(reinterpret_cast<char*>(&dudeFile.data), sizeof(CharData));
-
-            std::vector<Entry> entries;
-            for (int i = 0; i < dudeFile.header.animCount; ++i) {
-                Entry animPayload;
-                file.read(reinterpret_cast<char*>(&animPayload), sizeof(Entry));
-                entries.push_back(animPayload);
-            }
-            dudeFile.entries = entries;
-
-            file.close();
-            return dudeFile;
-        };
-
-        void getImage(std::vector<uint8_t> &buffer, const char* file, SpriteAsset anim) {
-            char filePath[256];
-            getFullPath(filePath, sizeof(filePath), file);
-            std::ifstream f(filePath, std::ios::binary);
-            
-            f.seekg(anim.offset); 
-            f.read(reinterpret_cast<char*>(buffer.data()), anim.size); 
-            
-        };
-
-        bool updateCharacterData(Character* c) {};
+        void log(const char* msg) override {std::cout << msg << std::endl;}
 
         ~SDLPlatform() {
             for (auto it = textureCache.begin(); it != textureCache.end(); ) {
@@ -73,7 +51,7 @@ class SDLPlatform : public IPlatform {
             textureCache.clear();
         };
 
-        void drawFrame(const char* file, SpriteAsset* anim, int frame, int x, int y) {
+        void drawFrame(const char* path, SpriteAsset* anim, int frame, int x, int y) {
             SDL_Texture* tex = nullptr;
 
             auto it = textureCache.find(anim->id);
@@ -81,7 +59,7 @@ class SDLPlatform : public IPlatform {
                 int totalWidth = anim->frameWidth * anim->frameCount;
 
                 std::vector<uint8_t> spriteData(anim->size);
-                this->getImage(spriteData, file,*anim);
+                this->getImage(spriteData, path,*anim);
                 if (spriteData.size() <= 0) return;
 
                 SDL_Surface* surface = SDL_CreateSurfaceFrom(
